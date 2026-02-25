@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HydroLip - Dehydration Analysis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+
+        .camera-overlay {
+            background: linear-gradient(rgba(0,0,0,0) 0%, rgba(0,0,0,0.4) 100%);
+        }
+
+        .scanner-line {
+            height: 2px;
+            background: rgba(59, 130, 246, 0.8);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.8);
+            position: absolute;
+            width: 100%;
+            top: 0;
+            animation: scan 3s infinite linear;
+        }
+
+        @keyframes scan {
+            0% { top: 10%; }
+            50% { top: 90%; }
+            100% { top: 10%; }
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body class="max-w-md mx-auto min-h-screen relative pb-24">
+
+    <!-- Header -->
+    <header class="p-6 flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-blue-600">HydroLip</h1>
+            <p class="text-xs text-gray-500">Lip Hydration Intelligence</p>
+        </div>
+        <div class="bg-blue-100 p-2 rounded-full">
+            <i data-lucide="droplets" class="text-blue-600 w-6 h-6"></i>
+        </div>
+    </header>
+
+    <!-- Main Content App State Management -->
+    <div id="app-content">
+        <!-- Dashboard / Home -->
+        <div id="view-home" class="p-6 space-y-6">
+            <div class="bg-gradient-to-br from-blue-500 to-blue-700 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden">
+                <div class="relative z-10">
+                    <h2 class="text-xl font-semibold">Start Analysis</h2>
+                    <p class="text-blue-100 text-sm mt-1">Check your lip health and hydration levels in seconds.</p>
+                    <button onclick="changeView('view-camera')" class="mt-4 bg-white text-blue-600 px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-blue-50 transition-colors">
+                        <i data-lucide="camera" class="w-5 h-5"></i>
+                        Open Scanner
+                    </button>
+                </div>
+                <i data-lucide="scan-face" class="absolute -right-4 -bottom-4 w-32 h-32 text-blue-400 opacity-20"></i>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="glass p-4 rounded-2xl shadow-sm">
+                    <span class="text-xs text-gray-500 block mb-1">Water Intake</span>
+                    <div class="flex items-end gap-1">
+                        <span id="water-count" class="text-2xl font-bold text-gray-800">0.8</span>
+                        <span class="text-xs text-gray-400 pb-1">/ 2.5L</span>
+                    </div>
+                    <div class="w-full bg-gray-200 h-1.5 rounded-full mt-2">
+                        <div class="bg-blue-500 h-1.5 rounded-full" style="width: 32%"></div>
+                    </div>
+                </div>
+                <div class="glass p-4 rounded-2xl shadow-sm">
+                    <span class="text-xs text-gray-500 block mb-1">Last Result</span>
+                    <div class="flex items-end gap-1">
+                        <span class="text-2xl font-bold text-orange-500">Dry</span>
+                    </div>
+                    <p class="text-[10px] text-gray-400 mt-2 italic">2 days ago</p>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <h3 class="font-bold text-gray-800">Quick Tips</h3>
+                <div class="space-y-3">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex gap-4">
+                        <div class="bg-yellow-100 p-2 rounded-lg h-fit">
+                            <i data-lucide="sun" class="text-yellow-600 w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-semibold">Use SPF Lip Balm</p>
+                            <p class="text-xs text-gray-500">Protect lips from UV-induced dehydration.</p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex gap-4">
+                        <div class="bg-red-100 p-2 rounded-lg h-fit">
+                            <i data-lucide="ban" class="text-red-600 w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-semibold">Avoid Lip Licking</p>
+                            <p class="text-xs text-gray-500">Saliva contains enzymes that can dry out lips further.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Camera View -->
+        <div id="view-camera" class="hidden fixed inset-0 bg-black z-50 flex flex-col">
+            <div class="p-6 flex items-center gap-4 text-white">
+                <button onclick="changeView('view-home')" class="p-2 hover:bg-white/10 rounded-full">
+                    <i data-lucide="arrow-left"></i>
+                </button>
+                <span class="font-semibold">Lip Scanner</span>
+            </div>
+            
+            <div class="flex-1 relative mx-6 mb-24 rounded-3xl overflow-hidden border-2 border-white/20">
+                <video id="video" class="w-full h-full object-cover" autoplay playsinline></video>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <div class="w-64 h-32 border-2 border-blue-400 rounded-[40%] flex items-center justify-center">
+                        <span class="text-white text-[10px] uppercase tracking-widest bg-blue-500 px-2 py-0.5 rounded">Center Lips Here</span>
+                    </div>
+                </div>
+                <div id="scanner" class="hidden scanner-line"></div>
+                <div id="capture-status" class="absolute bottom-8 left-0 right-0 text-center text-white text-sm font-medium opacity-0 transition-opacity">
+                    Analyzing Pixels...
+                </div>
+            </div>
+
+            <div class="absolute bottom-10 left-0 right-0 flex justify-center px-10">
+                <button id="capture-btn" onclick="startAnalysis()" class="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center group">
+                    <div class="w-16 h-16 bg-white rounded-full transition-transform active:scale-90"></div>
+                </button>
+            </div>
+        </div>
+
+        <!-- Result View -->
+        <div id="view-results" class="hidden p-6 space-y-6 animate-in slide-in-from-bottom-4 fade-in duration-500">
+            <div class="flex items-center gap-2 text-blue-600 mb-2">
+                <button onclick="changeView('view-home')" class="hover:bg-blue-50 p-1 rounded-lg">
+                    <i data-lucide="chevron-left" class="w-5 h-5"></i>
+                </button>
+                <span class="font-bold">Analysis Results</span>
+            </div>
+
+            <!-- Main Score -->
+            <div class="glass p-8 rounded-3xl text-center shadow-lg border-2 border-orange-100">
+                <div id="result-status-color" class="text-orange-500 mb-2 font-bold uppercase tracking-widest text-sm">Moderate Dehydration</div>
+                <div class="relative inline-block">
+                    <svg class="w-32 h-32 transform -rotate-90">
+                        <circle cx="64" cy="64" r="58" stroke="currentColor" stroke-width="8" fill="transparent" class="text-gray-100"></circle>
+                        <circle id="result-progress-circle" cx="64" cy="64" r="58" stroke="currentColor" stroke-width="8" fill="transparent" stroke-dasharray="364.4" stroke-dashoffset="200" class="text-orange-500 transition-all duration-1000 ease-out"></circle>
+                    </svg>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                        <span id="result-score" class="text-4xl font-bold text-gray-800">45%</span>
+                        <span class="text-[10px] text-gray-400 uppercase">Hydration</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detail Cards -->
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                    <div class="flex items-center gap-2 mb-2 text-gray-500">
+                        <i data-lucide="activity" class="w-4 h-4"></i>
+                        <span class="text-xs font-semibold">Texture</span>
+                    </div>
+                    <p id="res-texture" class="text-lg font-bold text-gray-800">Scaly</p>
+                    <p class="text-[10px] text-red-500 mt-1">Cracks Detected</p>
+                </div>
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                    <div class="flex items-center gap-2 mb-2 text-gray-500">
+                        <i data-lucide="palette" class="w-4 h-4"></i>
+                        <span class="text-xs font-semibold">Color</span>
+                    </div>
+                    <p id="res-color" class="text-lg font-bold text-gray-800">Pale Pink</p>
+                    <p class="text-[10px] text-blue-500 mt-1">Low circulation</p>
+                </div>
+            </div>
+
+            <!-- Recommendations -->
+            <div class="space-y-4">
+                <h3 class="font-bold text-gray-800">Tailored Recovery Plan</h3>
+                <div id="recommendations-list" class="space-y-3">
+                    <!-- Dynamic Items -->
+                </div>
+            </div>
+
+            <button onclick="changeView('view-home')" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-blue-200">
+                Back to Dashboard
+            </button>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-gray-100 px-8 py-4 flex justify-between items-center z-40 max-w-md mx-auto">
+        <button onclick="changeView('view-home')" class="text-blue-600"><i data-lucide="home"></i></button>
+        <button onclick="changeView('view-camera')" class="text-gray-400"><i data-lucide="camera"></i></button>
+        <button class="text-gray-400"><i data-lucide="droplets"></i></button>
+        <button class="text-gray-400"><i data-lucide="user"></i></button>
+    </nav>
+
+    <script>
+        // Initialize Icons
+        lucide.createIcons();
+
+        let stream = null;
+
+        function changeView(viewId) {
+            const views = ['view-home', 'view-camera', 'view-results'];
+            views.forEach(v => {
+                document.getElementById(v).classList.add('hidden');
+            });
+            document.getElementById(viewId).classList.remove('hidden');
+
+            if (viewId === 'view-camera') {
+                startCamera();
+            } else {
+                stopCamera();
+            }
+        }
+
+        async function startCamera() {
+            try {
+                const video = document.getElementById('video');
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'user' }, 
+                    audio: false 
+                });
+                video.srcObject = stream;
+            } catch (err) {
+                console.error("Camera error:", err);
+                const msg = document.createElement('div');
+                msg.className = 'p-6 text-white text-center';
+                msg.innerText = "Camera access denied or unavailable. Please enable permissions.";
+                document.getElementById('view-camera').prepend(msg);
+            }
+        }
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        }
+
+        function startAnalysis() {
+            const scanner = document.getElementById('scanner');
+            const status = document.getElementById('capture-status');
+            const btn = document.getElementById('capture-btn');
+
+            scanner.classList.remove('hidden');
+            status.classList.remove('opacity-0');
+            btn.classList.add('opacity-50', 'pointer-events-none');
+
+            // Simulate AI Processing
+            setTimeout(() => {
+                const results = generateRandomResults();
+                displayResults(results);
+                changeView('view-results');
+                
+                // Reset Camera UI
+                scanner.classList.add('hidden');
+                status.classList.add('opacity-0');
+                btn.classList.remove('opacity-50', 'pointer-events-none');
+            }, 3000);
+        }
+
+        function generateRandomResults() {
+            const levels = [
+                { status: "Severely Dehydrated", score: 22, color: "text-red-500", dash: 280, texture: "Cracked", lipColor: "Pale/White" },
+                { status: "Moderate Dehydration", score: 48, color: "text-orange-500", dash: 190, texture: "Dry/Scaly", lipColor: "Dull Pink" },
+                { status: "Mildly Dry", score: 65, color: "text-yellow-500", dash: 127, texture: "Fine Lines", lipColor: "Light Pink" },
+                { status: "Well Hydrated", score: 92, color: "text-green-500", dash: 20, texture: "Smooth", lipColor: "Natural Pink" }
+            ];
+            return levels[Math.floor(Math.random() * levels.length)];
+        }
+
+        function displayResults(data) {
+            document.getElementById('result-status-color').innerText = data.status;
+            document.getElementById('result-status-color').className = `${data.color} mb-2 font-bold uppercase tracking-widest text-sm`;
+            document.getElementById('result-score').innerText = `${data.score}%`;
+            document.getElementById('result-progress-circle').setAttribute('stroke-dashoffset', data.dash);
+            document.getElementById('result-progress-circle').className = `${data.color} transition-all duration-1000 ease-out`;
+            
+            document.getElementById('res-texture').innerText = data.texture;
+            document.getElementById('res-color').innerText = data.lipColor;
+
+            const recsList = document.getElementById('recommendations-list');
+            recsList.innerHTML = '';
+
+            const recommendations = getRecommendations(data.score);
+            recommendations.forEach(rec => {
+                const div = document.createElement('div');
+                div.className = "bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-start gap-3";
+                div.innerHTML = `
+                    <div class="bg-blue-50 p-2 rounded-lg text-blue-600 mt-1">
+                        <i data-lucide="${rec.icon}" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-bold text-gray-800">${rec.title}</p>
+                        <p class="text-xs text-gray-500">${rec.desc}</p>
+                    </div>
+                `;
+                recsList.appendChild(div);
+            });
+            lucide.createIcons();
+        }
+
+        function getRecommendations(score) {
+            const base = [
+                { icon: 'glass-water', title: 'Internal Hydration', desc: 'Drink at least 500ml of water immediately.' },
+                { icon: 'shield-check', title: 'Barrier Protection', desc: 'Apply a thick layer of Petrolatum or Beeswax-based balm.' }
+            ];
+
+            if (score < 40) {
+                base.push({ icon: 'home', title: 'Humidity Control', desc: 'Use a humidifier tonight; indoor air is too dry.' });
+                base.push({ icon: 'alert-triangle', title: 'Stop Exfoliation', desc: 'Do not use lip scrubs until cracking heals.' });
+            } else if (score < 70) {
+                base.push({ icon: 'sun', title: 'UV Protection', desc: 'Your color suggests sun stress. Use SPF 30+ balm.' });
+            } else {
+                base.push({ icon: 'sparkles', title: 'Maintenance', desc: 'Gently exfoliate once a week to maintain smoothness.' });
+            }
+            return base;
+        }
+    </script>
+</body>
+</html>
